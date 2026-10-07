@@ -74,6 +74,10 @@ Sunbeam does not copy consumer weather websites or require access to private API
 
 This release updates the eframe/egui integration for eframe 0.36.x. The application implements `eframe::App::ui(&mut Ui, &mut Frame)` and uses egui's theme-specific style API (`style_mut_of` / `set_theme`).
 
+## 0.1.3
+
+This release fixes three desktop UI issues: the main forecast is now inside a vertical scroll area, the search field keeps a stable text color while hovered, and weather/UI symbols no longer depend on emoji-capable fonts. Weather conditions are represented by semantic icon codes and rendered as vector shapes by egui.
+
 ## NixOS runtime libraries
 
 When building with `nix develop`, the development shell supplies the native Linux

@@ -1,6 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use eframe::egui::{self, Align, Color32, FontId, Layout, RichText, Sense, Stroke, Vec2};
+use eframe::egui::{self, Align, Color32, FontId, Layout, Pos2, RichText, Sense, Shape, Stroke, Vec2};
 use serde::{Deserialize, Serialize};
 use std::{fs, path::PathBuf, process::Command, sync::mpsc::{self, Receiver}, thread};
 
@@ -187,7 +187,7 @@ impl WeatherApp {
         self.report = None;
         self.error = None;
         self.locations.clear();
-        self.status_text = format!("Searching for {query}…");
+        self.status_text = format!("Searching for {query}...");
         let (tx, rx) = mpsc::channel();
         thread::spawn(move || {
             let result = run_backend(&["search", &query]);
@@ -201,7 +201,7 @@ impl WeatherApp {
         self.loading = true;
         self.error = None;
         self.report = None;
-        self.status_text = format!("Checking three public weather sources for {}…", loc.label());
+        self.status_text = format!("Checking three public weather sources for {}...", loc.label());
         self.remember_location(loc.clone());
         let contact = self.config.met_contact.clone();
         let units = match self.config.units { Units::C => "c", Units::F => "f" };
@@ -266,13 +266,11 @@ impl WeatherApp {
                 ui.label(RichText::new("Weather").size(18.0).color(self.muted()));
             });
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                let theme_icon = if self.config.dark { "☾" } else { "☀" };
-                let response = ui.add_sized([42.0, 42.0], egui::Button::new(RichText::new(theme_icon).size(22.0)).frame(false));
+                let response = theme_toggle_button(ui, self.config.dark);
                 if response.on_hover_text(if self.config.dark { "Switch to light mode" } else { "Switch to dark mode" }).clicked() {
                     self.toggle_theme(ctx);
                 }
-                let settings = ui.add_sized([42.0, 42.0], egui::Button::new(RichText::new("⚙").size(20.0)).frame(false));
-                if settings.on_hover_text("Settings").clicked() { self.show_settings = true; }
+                if ui.button("Settings").clicked() { self.show_settings = true; }
             });
         });
         ui.add_space(6.0);
@@ -286,12 +284,15 @@ impl WeatherApp {
             .inner_margin(egui::Margin::symmetric(12, 10));
         frame.show(ui, |ui| {
             ui.horizontal(|ui| {
-                ui.label(RichText::new("⌕").size(25.0).color(self.muted()));
+                search_icon(ui, self.muted());
+                let text_color = self.text();
                 let input = ui.add_sized([ui.available_width() - 98.0, 36.0], egui::TextEdit::singleline(&mut self.query)
                     .hint_text("Search any city, region or country")
-                    .font(FontId::proportional(17.0)));
+                    .font(FontId::proportional(17.0))
+                    .text_color(text_color)
+                    .background_color(Color32::TRANSPARENT));
                 if input.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) { self.submit_search(); }
-                let btn = ui.add_sized([76.0, 36.0], egui::Button::new(if self.loading { "…" } else { "Search" }).fill(self.text()).corner_radius(egui::CornerRadius::same(11)));
+                let btn = ui.add_sized([76.0, 36.0], egui::Button::new(if self.loading { "..." } else { "Search" }).fill(self.text()).corner_radius(egui::CornerRadius::same(11)));
                 if btn.clicked() { self.submit_search(); }
             });
         });
@@ -341,11 +342,11 @@ impl WeatherApp {
         ui.horizontal(|ui| {
             ui.vertical(|ui| {
                 ui.label(RichText::new(report.location.label()).size(27.0).strong().color(self.text()));
-                ui.label(RichText::new(format!("{} · {:.2}, {:.2}", report.location.timezone.clone().unwrap_or_else(|| "Local time".into()), report.location.latitude, report.location.longitude)).size(13.0).color(self.muted()));
+                ui.label(RichText::new(format!("{} | {:.2}, {:.2}", report.location.timezone.clone().unwrap_or_else(|| "Local time".into()), report.location.latitude, report.location.longitude)).size(13.0).color(self.muted()));
             });
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                if ui.button("↻ Refresh").clicked() { self.fetch_weather(report.location.clone()); }
-                if ui.button("⌂ Home").clicked() { self.report = None; self.error = None; }
+                if ui.button("Refresh").clicked() { self.fetch_weather(report.location.clone()); }
+                if ui.button("Home").clicked() { self.report = None; self.error = None; self.status_text.clear(); }
             });
         });
         ui.add_space(16.0);
@@ -380,7 +381,7 @@ impl WeatherApp {
         ui.add_space(12.0);
         source_card(self, ui, &report);
         ui.add_space(22.0);
-        ui.label(RichText::new(format!("Updated {} · Public sources · No sign-in required", report.fetched_at)).small().color(self.muted()));
+        ui.label(RichText::new(format!("Updated {} | Public sources | No sign-in required", report.fetched_at)).small().color(self.muted()));
         ctx.request_repaint_after(std::time::Duration::from_secs(30));
     }
 
@@ -404,7 +405,8 @@ impl WeatherApp {
                 ui.label(RichText::new("MET Norway contact").strong().size(17.0));
                 ui.label(RichText::new("MET Norway asks clients to identify themselves with a meaningful User-Agent. Add a site or contact address; this is stored locally.").small().color(self.muted()));
                 ui.add_space(8.0);
-                ui.add(egui::TextEdit::singleline(&mut self.config.met_contact).hint_text("https://your-site.example or you@example.org"));
+                let settings_text_color = self.text();
+                ui.add(egui::TextEdit::singleline(&mut self.config.met_contact).hint_text("https://your-site.example or you@example.org").text_color(settings_text_color).background_color(Color32::TRANSPARENT));
                 ui.add_space(16.0);
                 if ui.button("Save settings").clicked() { save_config(&self.config); self.show_settings = false; }
             });
@@ -421,28 +423,139 @@ impl eframe::App for WeatherApp {
             let max = 1080.0_f32.min(ui.available_width());
             ui.set_max_width(max);
             self.top_bar(ui, &ctx);
-            if self.report.is_none() && !self.loading && self.error.is_none() {
-                self.home(ui);
-            } else {
-                self.search_bar(ui);
-            }
-            if self.loading {
-                ui.add_space(12.0);
-                egui::Frame::new().fill(self.soft()).corner_radius(egui::CornerRadius::same(14)).inner_margin(egui::Margin::same(13)).show(ui, |ui| {
-                    ui.horizontal(|ui| { ui.spinner(); ui.label(RichText::new(&self.status_text).color(self.muted())); });
+
+            egui::ScrollArea::vertical()
+                .id_salt("sunbeam-main-scroll")
+                .auto_shrink([false, false])
+                .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::VisibleWhenNeeded)
+                .show(ui, |ui| {
+                    ui.set_width(ui.available_width());
+                    if self.report.is_none() && !self.loading && self.error.is_none() {
+                        self.home(ui);
+                    } else {
+                        self.search_bar(ui);
+                    }
+                    if self.loading {
+                        ui.add_space(12.0);
+                        egui::Frame::new().fill(self.soft()).corner_radius(egui::CornerRadius::same(14)).inner_margin(egui::Margin::same(13)).show(ui, |ui| {
+                            ui.horizontal(|ui| { ui.spinner(); ui.label(RichText::new(&self.status_text).color(self.muted())); });
+                        });
+                    }
+                    if let Some(error) = &self.error {
+                        ui.add_space(12.0);
+                        egui::Frame::new().fill(Color32::from_rgba_unmultiplied(219, 68, 55, if self.config.dark { 35 } else { 20 })).stroke(Stroke::new(1.0, Color32::from_rgb(219, 68, 55))).corner_radius(egui::CornerRadius::same(14)).inner_margin(egui::Margin::same(14)).show(ui, |ui| {
+                            ui.horizontal_wrapped(|ui| {
+                                ui.label(RichText::new("!  ").strong().color(Color32::from_rgb(219, 68, 55)));
+                                ui.label(RichText::new(error).color(self.text()));
+                            });
+                        });
+                    }
+                    if self.report.is_some() && !self.loading { self.result_view(ui, &ctx); }
                 });
-            }
-            if let Some(error) = &self.error {
-                ui.add_space(12.0);
-                egui::Frame::new().fill(Color32::from_rgba_unmultiplied(219, 68, 55, if self.config.dark { 35 } else { 20 })).stroke(Stroke::new(1.0, Color32::from_rgb(219, 68, 55))).corner_radius(egui::CornerRadius::same(14)).inner_margin(egui::Margin::same(14)).show(ui, |ui| {
-                    ui.horizontal_wrapped(|ui| {
-                        ui.label(RichText::new("!  ").strong().color(Color32::from_rgb(219, 68, 55)));
-                        ui.label(RichText::new(error).color(self.text()));
-                    });
-                });
-            }
-            if self.report.is_some() && !self.loading { self.result_view(ui, &ctx); }
         });
+    }
+}
+
+
+fn search_icon(ui: &mut egui::Ui, color: Color32) {
+    let (rect, _) = ui.allocate_exact_size(Vec2::splat(28.0), Sense::hover());
+    let p = ui.painter_at(rect);
+    let center = rect.center() - Vec2::new(2.0, 2.0);
+    p.circle_stroke(center, 7.0, Stroke::new(2.0, color));
+    p.line_segment([center + Vec2::new(5.0, 5.0), center + Vec2::new(11.0, 11.0)], Stroke::new(2.0, color));
+}
+
+fn theme_toggle_button(ui: &mut egui::Ui, dark: bool) -> egui::Response {
+    let (rect, response) = ui.allocate_exact_size(Vec2::splat(42.0), Sense::click());
+    let p = ui.painter_at(rect);
+    let center = rect.center();
+    let color = ui.visuals().strong_text_color();
+    if dark {
+        p.circle_filled(center, 9.0, color);
+        p.circle_filled(center + Vec2::new(4.0, -4.0), 9.0, ui.visuals().panel_fill);
+    } else {
+        p.circle_filled(center, 8.0, color);
+        for i in 0..8 {
+            let a = i as f32 * std::f32::consts::TAU / 8.0;
+            let d = Vec2::new(a.cos(), a.sin());
+            p.line_segment([center + d * 12.0, center + d * 15.0], Stroke::new(2.0, color));
+        }
+    }
+    if response.hovered() {
+        p.circle_stroke(center, 18.0, Stroke::new(1.0, color));
+    }
+    response
+}
+
+fn weather_icon(ui: &mut egui::Ui, code: &str, size: f32, color: Color32) {
+    let (rect, _) = ui.allocate_exact_size(Vec2::splat(size), Sense::hover());
+    let p = ui.painter_at(rect);
+    let key = code.to_ascii_lowercase();
+    let center = rect.center();
+    let cloud_y = center.y + size * 0.10;
+    let cloud_left = center.x - size * 0.28;
+    let cloud_right = center.x + size * 0.30;
+
+    let draw_sun = |p: &egui::Painter, c: Pos2, r: f32| {
+        p.circle_filled(c, r, color);
+        for i in 0..8 {
+            let a = i as f32 * std::f32::consts::TAU / 8.0;
+            let d = Vec2::new(a.cos(), a.sin());
+            p.line_segment([c + d * (r + 4.0), c + d * (r + 9.0)], Stroke::new(2.0, color));
+        }
+    };
+    let draw_cloud = |p: &egui::Painter, y: f32| {
+        p.circle_filled(Pos2::new(center.x - size * 0.16, y), size * 0.17, color);
+        p.circle_filled(Pos2::new(center.x + size * 0.01, y - size * 0.06), size * 0.22, color);
+        p.circle_filled(Pos2::new(center.x + size * 0.19, y), size * 0.15, color);
+        p.rect_filled(
+            egui::Rect::from_min_max(Pos2::new(cloud_left, y), Pos2::new(cloud_right, y + size * 0.17)),
+            egui::CornerRadius::same((size * 0.08).min(255.0) as u8),
+            color,
+        );
+    };
+
+    match key.as_str() {
+        "sun" | "clear" => draw_sun(&p, center, size * 0.20),
+        "moon" => {
+            p.circle_filled(center, size * 0.24, color);
+            p.circle_filled(center + Vec2::new(size * 0.11, -size * 0.10), size * 0.24, ui.visuals().extreme_bg_color);
+        }
+        "partly" => {
+            draw_sun(&p, center - Vec2::new(size * 0.15, size * 0.13), size * 0.15);
+            draw_cloud(&p, cloud_y);
+        }
+        "cloud" => draw_cloud(&p, cloud_y),
+        "fog" => {
+            for offset in [-0.15, 0.0, 0.15] {
+                let y = center.y + size * offset;
+                p.line_segment([Pos2::new(center.x - size * 0.27, y), Pos2::new(center.x + size * 0.27, y)], Stroke::new(3.0, color));
+            }
+        }
+        "rain" => {
+            draw_cloud(&p, cloud_y - size * 0.02);
+            for i in -1..=1 {
+                let x = center.x + i as f32 * size * 0.16;
+                p.line_segment([Pos2::new(x, center.y + size * 0.22), Pos2::new(x - size * 0.06, center.y + size * 0.38)], Stroke::new(3.0, color));
+            }
+        }
+        "snow" => {
+            draw_cloud(&p, cloud_y - size * 0.04);
+            for i in -1..=1 {
+                p.circle_filled(Pos2::new(center.x + i as f32 * size * 0.16, center.y + size * 0.31), size * 0.045, color);
+            }
+        }
+        "storm" => {
+            draw_cloud(&p, cloud_y - size * 0.04);
+            let pts = vec![
+                Pos2::new(center.x + size * 0.03, center.y + size * 0.18),
+                Pos2::new(center.x - size * 0.08, center.y + size * 0.38),
+                Pos2::new(center.x + size * 0.04, center.y + size * 0.35),
+                Pos2::new(center.x - size * 0.02, center.y + size * 0.50),
+            ];
+            p.add(Shape::line(pts, Stroke::new(3.0, color)));
+        }
+        _ => draw_sun(&p, center, size * 0.20),
     }
 }
 
@@ -450,7 +563,7 @@ fn current_card(app: &WeatherApp, ui: &mut egui::Ui, report: &Report) {
     card_frame(app).show(ui, |ui| {
         ui.horizontal(|ui| {
             ui.vertical(|ui| {
-                ui.label(RichText::new(&report.current.icon).size(56.0));
+                weather_icon(ui, &report.current.icon, 64.0, app.accent());
                 ui.add_space(4.0);
                 ui.label(RichText::new(display_temp(app, report.current.temp_c)).size(58.0).strong().color(app.text()));
                 ui.label(RichText::new(title_case(&report.current.condition)).size(18.0).color(app.text()));
@@ -482,7 +595,7 @@ fn daily_card(app: &WeatherApp, ui: &mut egui::Ui, report: &Report) {
                         ui.set_min_width(95.0);
                         ui.vertical_centered(|ui| {
                             ui.label(RichText::new(if index == 0 { "Today".into() } else { weekday(&day.date) }).strong().color(app.text()));
-                            ui.label(RichText::new(day.icon.clone()).size(30.0));
+                            weather_icon(ui, &day.icon, 36.0, app.accent());
                             ui.label(RichText::new(format!("{} / {}", display_temp(app, day.max_c), display_temp(app, day.min_c))).size(15.0).strong().color(app.text()));
                             if let Some(p) = day.precip_prob { ui.label(RichText::new(format!("{p:.0}% rain")).small().color(app.accent())); }
                         });
@@ -506,7 +619,7 @@ fn hourly_card(app: &WeatherApp, ui: &mut egui::Ui, report: &Report) {
                     egui::Frame::new().inner_margin(egui::Margin::symmetric(9, 8)).show(ui, |ui| {
                         ui.vertical_centered(|ui| {
                             ui.label(RichText::new(h).small().color(app.muted()));
-                            ui.label(RichText::new(hour.icon.clone()).size(25.0));
+                            weather_icon(ui, &hour.icon, 30.0, app.accent());
                             ui.label(RichText::new(display_temp(app, hour.temp_c)).strong().color(app.text()));
                             if let Some(p) = hour.precip_prob { ui.label(RichText::new(format!("{p:.0}%")).small().color(app.accent())); }
                         });
@@ -544,14 +657,14 @@ fn details_card(app: &WeatherApp, ui: &mut egui::Ui, report: &Report) {
         ui.add_space(10.0);
         egui::Grid::new("detail_grid").num_columns(4).spacing(Vec2::new(28.0, 14.0)).striped(false).show(ui, |ui| {
             detail_item(app, ui, "Feels like", display_temp(app, report.current.feels_c));
-            detail_item(app, ui, "Humidity", report.current.humidity.map_or("—".into(), |v| format!("{v:.0}%")));
-            detail_item(app, ui, "Wind", report.current.wind_kph.map_or("—".into(), |v| format!("{v:.0} km/h {}", report.current.wind_dir.clone().unwrap_or_default())));
-            detail_item(app, ui, "Pressure", report.current.pressure_hpa.map_or("—".into(), |v| format!("{v:.0} hPa")));
+            detail_item(app, ui, "Humidity", report.current.humidity.map_or("-".into(), |v| format!("{v:.0}%")));
+            detail_item(app, ui, "Wind", report.current.wind_kph.map_or("-".into(), |v| format!("{v:.0} km/h {}", report.current.wind_dir.clone().unwrap_or_default())));
+            detail_item(app, ui, "Pressure", report.current.pressure_hpa.map_or("-".into(), |v| format!("{v:.0} hPa")));
             ui.end_row();
-            detail_item(app, ui, "Visibility", report.current.visibility_km.map_or("—".into(), |v| format!("{v:.1} km")));
-            detail_item(app, ui, "Cloud cover", report.current.cloud_pct.map_or("—".into(), |v| format!("{v:.0}%")));
-            detail_item(app, ui, "Precipitation", report.current.precip_mm.map_or("—".into(), |v| format!("{v:.1} mm")));
-            detail_item(app, ui, "UV index", report.current.uv.map_or("—".into(), |v| format!("{v:.0}")));
+            detail_item(app, ui, "Visibility", report.current.visibility_km.map_or("-".into(), |v| format!("{v:.1} km")));
+            detail_item(app, ui, "Cloud cover", report.current.cloud_pct.map_or("-".into(), |v| format!("{v:.0}%")));
+            detail_item(app, ui, "Precipitation", report.current.precip_mm.map_or("-".into(), |v| format!("{v:.1} mm")));
+            detail_item(app, ui, "UV index", report.current.uv.map_or("-".into(), |v| format!("{v:.0}")));
         });
     });
 }
@@ -566,7 +679,7 @@ fn source_card(app: &WeatherApp, ui: &mut egui::Ui, report: &Report) {
         ui.add_space(9.0);
         ui.horizontal_wrapped(|ui| {
             for src in &report.sources {
-                let mark = if src.ok { "●" } else { "○" };
+                let mark = if src.ok { "OK" } else { "--" };
                 let fill = if src.ok { app.soft() } else { app.card() };
                 let color = if src.ok { app.accent() } else { app.muted() };
                 egui::Frame::new().fill(fill).stroke(Stroke::new(1.0, app.line())).corner_radius(egui::CornerRadius::same(14)).inner_margin(egui::Margin::symmetric(10, 7)).show(ui, |ui| {
@@ -584,7 +697,7 @@ fn card_frame(app: &WeatherApp) -> egui::Frame {
 }
 
 fn metric(app: &WeatherApp, ui: &mut egui::Ui, label: &str, value: Option<String>) {
-    let value = value.unwrap_or_else(|| "—".into());
+    let value = value.unwrap_or_else(|| "-".into());
     egui::Frame::new().fill(app.soft()).corner_radius(egui::CornerRadius::same(14)).inner_margin(egui::Margin::symmetric(11, 9)).show(ui, |ui| {
         ui.vertical(|ui| { ui.label(RichText::new(label).small().color(app.muted())); ui.label(RichText::new(value).strong().color(app.text())); });
     });

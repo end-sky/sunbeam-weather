@@ -524,17 +524,17 @@ func metSymbolIcon(s string) string {
 	s = strings.ToLower(s)
 	switch {
 	case strings.Contains(s, "thunder"):
-		return "⛈"
+		return "storm"
 	case strings.Contains(s, "snow") || strings.Contains(s, "sleet"):
-		return "❄"
+		return "snow"
 	case strings.Contains(s, "rain") || strings.Contains(s, "drizzle"):
-		return "☂"
+		return "rain"
 	case strings.Contains(s, "fog"):
-		return "≋"
+		return "fog"
 	case strings.Contains(s, "cloud"):
-		return "⛅"
+		return "partly"
 	default:
-		return "☀"
+		return "sun"
 	}
 }
 
@@ -668,46 +668,52 @@ func iconFromText(t string) string {
 	t = strings.ToLower(t)
 	switch {
 	case strings.Contains(t, "thunder"):
-		return "⛈"
+		return "storm"
 	case strings.Contains(t, "snow") || strings.Contains(t, "sleet"):
-		return "❄"
+		return "snow"
 	case strings.Contains(t, "rain") || strings.Contains(t, "drizzle"):
-		return "☂"
+		return "rain"
 	case strings.Contains(t, "fog") || strings.Contains(t, "mist"):
-		return "≋"
+		return "fog"
 	case strings.Contains(t, "overcast"):
-		return "☁"
+		return "cloud"
 	case strings.Contains(t, "cloud"):
-		return "⛅"
+		return "partly"
 	default:
-		return "☀"
+		return "sun"
 	}
 }
 func weatherCode(code int, day bool) (string, string) {
 	switch code {
 	case 0:
-		return "clear sky", "☀"
+		if !day {
+			return "clear sky", "moon"
+		}
+		return "clear sky", "sun"
 	case 1:
-		return "mainly clear", "☀"
+		if !day {
+			return "mainly clear", "moon"
+		}
+		return "mainly clear", "sun"
 	case 2:
-		return "partly cloudy", "⛅"
+		return "partly cloudy", "partly"
 	case 3:
-		return "overcast", "☁"
+		return "overcast", "cloud"
 	case 45, 48:
-		return "fog", "≋"
+		return "fog", "fog"
 	case 51, 53, 55, 56, 57:
-		return "drizzle", "☂"
+		return "drizzle", "rain"
 	case 61, 63, 65, 66, 67, 80, 81, 82:
-		return "rain", "☂"
+		return "rain", "rain"
 	case 71, 73, 75, 77, 85, 86:
-		return "snow", "❄"
+		return "snow", "snow"
 	case 95, 96, 99:
-		return "thunderstorm", "⛈"
+		return "thunderstorm", "storm"
 	default:
 		if !day {
-			return "clear night", "☾"
+			return "clear night", "moon"
 		}
-		return "weather", "☁"
+		return "weather", "cloud"
 	}
 }
 func isDayHour(s string) bool {

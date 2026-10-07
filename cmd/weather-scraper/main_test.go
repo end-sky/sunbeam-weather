@@ -11,11 +11,11 @@ func TestWeatherCodeMap(t *testing.T) {
 		code               int
 		wantText, wantIcon string
 	}{
-		{0, "clear sky", "☀"},
-		{2, "partly cloudy", "⛅"},
-		{63, "rain", "☂"},
-		{75, "snow", "❄"},
-		{95, "thunderstorm", "⛈"},
+		{0, "clear sky", "sun"},
+		{2, "partly cloudy", "partly"},
+		{63, "rain", "rain"},
+		{75, "snow", "snow"},
+		{95, "thunderstorm", "storm"},
 	}
 	for _, tc := range cases {
 		gotText, gotIcon := weatherCode(tc.code, true)
@@ -43,7 +43,7 @@ func TestWttrNestedDataCompatibility(t *testing.T) {
 		t.Fatalf("nested weather length = %d; want 1", len(env.Weather()))
 	}
 	cur := normalizeWttrCurrent(*env.Current())
-	if cur.TempC != 21 || cur.FeelsC != 20 || cur.Icon != "⛅" {
+	if cur.TempC != 21 || cur.FeelsC != 20 || cur.Icon != "partly" {
 		t.Fatalf("unexpected current normalization: %+v", cur)
 	}
 }
