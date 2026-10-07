@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>org.sunbeam_weather</id>
+  <name>Sunbeam Weather</name>
+  <summary>Simple weather, checked against multiple public sources</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <description>
+    <p>Sunbeam Weather is a Linux desktop weather app with a Google-styled search-first interface, a one-click sun/moon theme switch, a seven-day forecast, hourly temperatures, and visible source agreement.</p>
+    <p>Its backend uses free public endpoints and does not require user accounts or API keys for the default providers.</p>
+  </description>
+  <launchable type="desktop-id">org.sunbeam_weather.desktop</launchable>
+  <content_rating type="oars-1.1"/>
+</component>

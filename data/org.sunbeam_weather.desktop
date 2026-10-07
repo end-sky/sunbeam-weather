@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Sunbeam Weather
+Comment=Privacy-friendly Linux weather dashboard
+Exec=sunbeam-weather
+Icon=sunbeam-weather
+Terminal=false
+Type=Application
+Categories=Network;Utility;Weather;
+StartupNotify=true
