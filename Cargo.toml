@@ -1,0 +1,17 @@
+[package]
+name = "sunbeam-weather"
+version = "0.1.1"
+edition = "2024"
+license = "GPL-3.0-or-later"
+description = "A privacy-friendly Linux weather dashboard with a Rust/egui GUI and a Go metasearch backend."
+
+[dependencies]
+eframe = { version = "0.36.2", default-features = true }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = true
+opt-level = 3

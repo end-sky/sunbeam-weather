@@ -1,0 +1,3 @@
+Sunbeam Weather is released under GPL-3.0-or-later.
+
+The application is an original implementation. It was inspired by end-sky/weather-metasearch (GPL-3.0) and Breezy Weather. No source files from those projects are vendored into this tree.
